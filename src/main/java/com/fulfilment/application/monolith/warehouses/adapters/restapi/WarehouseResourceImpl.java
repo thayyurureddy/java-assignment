@@ -11,7 +11,14 @@ import java.util.List;
 @RequestScoped
 public class WarehouseResourceImpl implements WarehouseResource {
 
-  @Inject private WarehouseRepository warehouseRepository;
+  @Inject
+  private WarehouseRepository warehouseRepository;
+  @Inject
+  private com.fulfilment.application.monolith.warehouses.domain.ports.CreateWarehouseOperation createWarehouseUseCase;
+  @Inject
+  private com.fulfilment.application.monolith.warehouses.domain.ports.ReplaceWarehouseOperation replaceWarehouseUseCase;
+  @Inject
+  private com.fulfilment.application.monolith.warehouses.domain.ports.ArchiveWarehouseOperation archiveWarehouseUseCase;
 
   @Override
   public List<Warehouse> listAllWarehousesUnits() {
@@ -20,28 +27,47 @@ public class WarehouseResourceImpl implements WarehouseResource {
 
   @Override
   public Warehouse createANewWarehouseUnit(@NotNull Warehouse data) {
-    // TODO Auto-generated method stub
-    throw new UnsupportedOperationException("Unimplemented method 'createANewWarehouseUnit'");
+    var domainWarehouse = toDomain(data);
+    domainWarehouse.createdAt = java.time.LocalDateTime.now();
+    createWarehouseUseCase.create(domainWarehouse);
+    return toWarehouseResponse(domainWarehouse);
   }
 
   @Override
   public Warehouse getAWarehouseUnitByID(String id) {
-    // TODO Auto-generated method stub
-    throw new UnsupportedOperationException("Unimplemented method 'getAWarehouseUnitByID'");
+    var domainWarehouse = warehouseRepository.findByBusinessUnitCode(id);
+    if (domainWarehouse == null) {
+      throw new jakarta.ws.rs.WebApplicationException("Warehouse not found", 404);
+    }
+    return toWarehouseResponse(domainWarehouse);
   }
 
   @Override
   public void archiveAWarehouseUnitByID(String id) {
-    // TODO Auto-generated method stub
-    throw new UnsupportedOperationException("Unimplemented method 'archiveAWarehouseUnitByID'");
+    var domainWarehouse = warehouseRepository.findByBusinessUnitCode(id);
+    if (domainWarehouse == null) {
+      throw new jakarta.ws.rs.WebApplicationException("Warehouse not found", 404);
+    }
+    domainWarehouse.archivedAt = java.time.LocalDateTime.now();
+    archiveWarehouseUseCase.archive(domainWarehouse);
   }
 
   @Override
   public Warehouse replaceTheCurrentActiveWarehouse(
       String businessUnitCode, @NotNull Warehouse data) {
-    // TODO Auto-generated method stub
-    throw new UnsupportedOperationException(
-        "Unimplemented method 'replaceTheCurrentActiveWarehouse'");
+    var newWarehouse = toDomain(data);
+    newWarehouse.businessUnitCode = businessUnitCode;
+    replaceWarehouseUseCase.replace(newWarehouse);
+    return toWarehouseResponse(newWarehouse);
+  }
+
+  private com.fulfilment.application.monolith.warehouses.domain.models.Warehouse toDomain(Warehouse warehouse) {
+    var domain = new com.fulfilment.application.monolith.warehouses.domain.models.Warehouse();
+    domain.businessUnitCode = warehouse.getBusinessUnitCode();
+    domain.location = warehouse.getLocation();
+    domain.capacity = warehouse.getCapacity();
+    domain.stock = warehouse.getStock();
+    return domain;
   }
 
   private Warehouse toWarehouseResponse(

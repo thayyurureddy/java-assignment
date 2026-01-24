@@ -16,25 +16,48 @@ public class WarehouseRepository implements WarehouseStore, PanacheRepository<Db
 
   @Override
   public void create(Warehouse warehouse) {
-    // TODO Auto-generated method stub
-    throw new UnsupportedOperationException("Unimplemented method 'create'");
+    DbWarehouse dbWarehouse = fromWarehouse(warehouse);
+    this.persist(dbWarehouse);
   }
 
   @Override
   public void update(Warehouse warehouse) {
-    // TODO Auto-generated method stub
-    throw new UnsupportedOperationException("Unimplemented method 'replace'");
+    DbWarehouse dbWarehouse = findActiveByBuCode(warehouse.businessUnitCode);
+    if (dbWarehouse != null) {
+      dbWarehouse.location = warehouse.location;
+      dbWarehouse.capacity = warehouse.capacity;
+      dbWarehouse.stock = warehouse.stock;
+      dbWarehouse.archivedAt = warehouse.archivedAt;
+      this.persist(dbWarehouse);
+    }
   }
 
   @Override
   public void remove(Warehouse warehouse) {
-    // TODO Auto-generated method stub
-    throw new UnsupportedOperationException("Unimplemented method 'remove'");
+    DbWarehouse dbWarehouse = findActiveByBuCode(warehouse.businessUnitCode);
+    if (dbWarehouse != null) {
+      this.delete(dbWarehouse);
+    }
   }
 
   @Override
   public Warehouse findByBusinessUnitCode(String buCode) {
-    // TODO Auto-generated method stub
-    throw new UnsupportedOperationException("Unimplemented method 'findById'");
+    DbWarehouse dbWarehouse = findActiveByBuCode(buCode);
+    return dbWarehouse != null ? dbWarehouse.toWarehouse() : null;
+  }
+
+  private DbWarehouse findActiveByBuCode(String buCode) {
+    return this.find("businessUnitCode = ?1 and archivedAt is null", buCode).firstResult();
+  }
+
+  private DbWarehouse fromWarehouse(Warehouse warehouse) {
+    DbWarehouse dbWarehouse = new DbWarehouse();
+    dbWarehouse.businessUnitCode = warehouse.businessUnitCode;
+    dbWarehouse.location = warehouse.location;
+    dbWarehouse.capacity = warehouse.capacity;
+    dbWarehouse.stock = warehouse.stock;
+    dbWarehouse.createdAt = warehouse.createdAt;
+    dbWarehouse.archivedAt = warehouse.archivedAt;
+    return dbWarehouse;
   }
 }

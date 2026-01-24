@@ -27,7 +27,10 @@ import org.jboss.logging.Logger;
 @Consumes("application/json")
 public class StoreResource {
 
-  @Inject LegacyStoreManagerGateway legacyStoreManagerGateway;
+  @Inject
+  LegacyStoreManagerGateway legacyStoreManagerGateway;
+  @Inject
+  jakarta.transaction.TransactionManager transactionManager;
 
   private static final Logger LOGGER = Logger.getLogger(StoreResource.class.getName());
 
@@ -55,7 +58,7 @@ public class StoreResource {
 
     store.persist();
 
-    legacyStoreManagerGateway.createStoreOnLegacySystem(store);
+    registerPostCommitAction(() -> legacyStoreManagerGateway.createStoreOnLegacySystem(store));
 
     return Response.ok(store).status(201).build();
   }
@@ -77,7 +80,7 @@ public class StoreResource {
     entity.name = updatedStore.name;
     entity.quantityProductsInStock = updatedStore.quantityProductsInStock;
 
-    legacyStoreManagerGateway.updateStoreOnLegacySystem(updatedStore);
+    registerPostCommitAction(() -> legacyStoreManagerGateway.updateStoreOnLegacySystem(updatedStore));
 
     return entity;
   }
@@ -104,7 +107,7 @@ public class StoreResource {
       entity.quantityProductsInStock = updatedStore.quantityProductsInStock;
     }
 
-    legacyStoreManagerGateway.updateStoreOnLegacySystem(updatedStore);
+    registerPostCommitAction(() -> legacyStoreManagerGateway.updateStoreOnLegacySystem(updatedStore));
 
     return entity;
   }
@@ -121,10 +124,34 @@ public class StoreResource {
     return Response.status(204).build();
   }
 
+  private void registerPostCommitAction(Runnable action) {
+    try {
+      if (transactionManager.getTransaction() != null) {
+        transactionManager.getTransaction().registerSynchronization(new jakarta.transaction.Synchronization() {
+          @Override
+          public void beforeCompletion() {
+          }
+
+          @Override
+          public void afterCompletion(int status) {
+            if (status == jakarta.transaction.Status.STATUS_COMMITTED) {
+              action.run();
+            }
+          }
+        });
+      } else {
+        action.run();
+      }
+    } catch (Exception e) {
+      throw new RuntimeException("Error registering transaction synchronization", e);
+    }
+  }
+
   @Provider
   public static class ErrorMapper implements ExceptionMapper<Exception> {
 
-    @Inject ObjectMapper objectMapper;
+    @Inject
+    ObjectMapper objectMapper;
 
     @Override
     public Response toResponse(Exception exception) {

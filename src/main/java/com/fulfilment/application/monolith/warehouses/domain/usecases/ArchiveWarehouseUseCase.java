@@ -16,8 +16,10 @@ public class ArchiveWarehouseUseCase implements ArchiveWarehouseOperation {
 
   @Override
   public void archive(Warehouse warehouse) {
-    // TODO implement this method
-
+    // If it's already archived, nothing to do
+    if (warehouse.archivedAt == null) {
+      warehouse.archivedAt = java.time.LocalDateTime.now();
+    }
     warehouseStore.update(warehouse);
   }
 }
