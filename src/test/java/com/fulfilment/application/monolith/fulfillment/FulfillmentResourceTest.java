@@ -20,7 +20,7 @@ public class FulfillmentResourceTest {
 
     @Test
     public void testCreateAssociation_Success() {
-        Fulfillment f = new Fulfillment(1L, 1L, "BU001");
+        Fulfillment f = new Fulfillment(1L, 1L, "MWH.001");
 
         given()
                 .contentType("application/json")
@@ -32,10 +32,10 @@ public class FulfillmentResourceTest {
 
     @Test
     public void testCreateAssociation_Max2PerProductStore() {
-        createFulfillment(new Fulfillment(101L, 101L, "BU101"));
-        createFulfillment(new Fulfillment(101L, 101L, "BU102"));
+        createFulfillment(new Fulfillment(1L, 1L, "MWH.001"));
+        createFulfillment(new Fulfillment(1L, 1L, "MWH.012"));
 
-        Fulfillment f3 = new Fulfillment(101L, 101L, "BU103");
+        Fulfillment f3 = new Fulfillment(1L, 1L, "MWH.023");
 
         given()
                 .contentType("application/json")
@@ -47,11 +47,11 @@ public class FulfillmentResourceTest {
 
     @Test
     public void testCreateAssociation_Max3PerStore() {
-        createFulfillment(new Fulfillment(201L, 201L, "BU201"));
-        createFulfillment(new Fulfillment(202L, 201L, "BU202"));
-        createFulfillment(new Fulfillment(203L, 201L, "BU203"));
+        createFulfillment(new Fulfillment(2L, 2L, "MWH.001"));
+        createFulfillment(new Fulfillment(3L, 2L, "MWH.001"));
+        createFulfillment(new Fulfillment(1L, 2L, "MWH.012"));
 
-        Fulfillment f4 = new Fulfillment(204L, 201L, "BU204");
+        Fulfillment f4 = new Fulfillment(1L, 2L, "MWH.023");
 
         given()
                 .contentType("application/json")
@@ -63,13 +63,17 @@ public class FulfillmentResourceTest {
 
     @Test
     public void testCreateAssociation_Max5PerWarehouse() {
-        createFulfillment(new Fulfillment(301L, 301L, "BU301"));
-        createFulfillment(new Fulfillment(302L, 301L, "BU301"));
-        createFulfillment(new Fulfillment(303L, 301L, "BU301"));
-        createFulfillment(new Fulfillment(304L, 301L, "BU301"));
-        createFulfillment(new Fulfillment(305L, 301L, "BU301"));
+        createFulfillment(new Fulfillment(1L, 3L, "MWH.001"));
+        createFulfillment(new Fulfillment(2L, 3L, "MWH.001"));
+        createFulfillment(new Fulfillment(3L, 3L, "MWH.001"));
+        // Reuse product IDs since we only have 3 products, but different pairs or logic
+        // might be needed.
+        // The rule is "Max 5 per Warehouse". It doesn't say unique products.
+        // Assuming (Product, Store) pairs.
+        createFulfillment(new Fulfillment(1L, 1L, "MWH.001"));
+        createFulfillment(new Fulfillment(2L, 1L, "MWH.001"));
 
-        Fulfillment f6 = new Fulfillment(306L, 301L, "BU301");
+        Fulfillment f6 = new Fulfillment(3L, 1L, "MWH.001");
 
         given()
                 .contentType("application/json")
