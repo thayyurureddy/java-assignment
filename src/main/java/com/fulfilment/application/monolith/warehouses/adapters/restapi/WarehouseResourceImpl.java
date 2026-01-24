@@ -9,6 +9,7 @@ import jakarta.transaction.Transactional;
 import jakarta.validation.constraints.NotNull;
 import java.util.List;
 
+@jakarta.ws.rs.Path("/warehouse")
 @RequestScoped
 public class WarehouseResourceImpl implements WarehouseResource {
 
