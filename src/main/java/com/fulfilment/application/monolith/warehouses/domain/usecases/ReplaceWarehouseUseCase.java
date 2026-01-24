@@ -1,58 +1,73 @@
 package com.fulfilment.application.monolith.warehouses.domain.usecases;
 
+import com.fulfilment.application.monolith.common.exceptions.ConflictException;
+import com.fulfilment.application.monolith.common.exceptions.ResourceNotFoundException;
+import com.fulfilment.application.monolith.common.exceptions.ValidationException;
 import com.fulfilment.application.monolith.warehouses.domain.models.Warehouse;
 import com.fulfilment.application.monolith.warehouses.domain.ports.ReplaceWarehouseOperation;
 import com.fulfilment.application.monolith.warehouses.domain.ports.WarehouseStore;
 import jakarta.enterprise.context.ApplicationScoped;
+import org.jboss.logging.Logger;
 
 @ApplicationScoped
 public class ReplaceWarehouseUseCase implements ReplaceWarehouseOperation {
 
   private final WarehouseStore warehouseStore;
+  private final com.fulfilment.application.monolith.warehouses.domain.ports.LocationResolver locationResolver;
+  private static final Logger LOGGER = Logger.getLogger(ReplaceWarehouseUseCase.class);
 
-  public ReplaceWarehouseUseCase(WarehouseStore warehouseStore) {
+  public ReplaceWarehouseUseCase(WarehouseStore warehouseStore,
+      com.fulfilment.application.monolith.warehouses.domain.ports.LocationResolver locationResolver) {
     this.warehouseStore = warehouseStore;
+    this.locationResolver = locationResolver;
   }
 
   @Override
   public void replace(Warehouse newWarehouse) {
+    LOGGER.infof("Replacing warehouse: %s", newWarehouse.businessUnitCode);
     var oldWarehouse = warehouseStore.findByBusinessUnitCode(newWarehouse.businessUnitCode);
     if (oldWarehouse == null) {
-      throw new RuntimeException("Warehouse to replace not found");
+      throw new ResourceNotFoundException("Warehouse to replace not found");
     }
 
     // Capacity Accommodation
     if (newWarehouse.capacity < oldWarehouse.stock) {
-      throw new RuntimeException("New capacity cannot accommodate existing stock");
+      throw new ValidationException("New capacity cannot accommodate existing stock");
     }
 
     // Stock Matching
     if (!newWarehouse.stock.equals(oldWarehouse.stock)) {
-      throw new RuntimeException("Stock must match the previous warehouse stock");
+      throw new ValidationException("Stock must match the previous warehouse stock");
+    }
+
+    // Location Validation
+    var location = locationResolver.resolveByIdentifier(newWarehouse.location);
+    if (location == null) {
+      throw new ResourceNotFoundException("Invalid location");
+    }
+
+    // Warehouse Creation Feasibility
+    var existingWarehouses = warehouseStore.getAll().stream()
+        .filter(w -> w.location.equals(newWarehouse.location) && w.archivedAt == null)
+        .filter(w -> !w.businessUnitCode.equals(oldWarehouse.businessUnitCode))
+        .toList();
+    if (existingWarehouses.size() >= location.maxNumberOfWarehouses) {
+      throw new ConflictException("Maximum number of warehouses reached for this location");
+    }
+
+    // Capacity and Stock Validation
+    int currentTotalCapacity = existingWarehouses.stream().mapToInt(w -> w.capacity).sum();
+    if (currentTotalCapacity + newWarehouse.capacity > location.maxCapacity) {
+      throw new ValidationException("Total capacity exceeds maximum capacity for this location");
     }
 
     // Archive old one (logical delete)
     oldWarehouse.archivedAt = java.time.LocalDateTime.now();
     warehouseStore.update(oldWarehouse);
 
-    // Create new one (since BuCode is same, and we find by BuCode and archivedAt is
-    // null, we need to handle this)
-    // Actually, the requirement says "Replacing a Warehouse".
-    // Usually this means a new BU code or same BU code but different unit?
-    // "Ensure the new warehouse's capacity can accommodate the stock from the
-    // warehouse being replaced."
-    // This implies we are replacing one WITH ANOTHER.
+    newWarehouse.createdAt = java.time.LocalDateTime.now();
 
-    // For this assignment, I'll assume replace updates the existing active one OR
-    // creates a new record if BU code is same.
-    // Given the repository implementation findActiveByBuCode, we should probably
-    // just update it if we want to "replace" it in place,
-    // OR create a new one with a different BU code if that's what's intended.
-    // But "replaceTheCurrentActiveWarehouse(businessUnitCode, data)" suggests we
-    // are replacing the one with THAT BU code.
-
-    // I'll implement it as updating the existing one with new data, but applying
-    // the constraints.
-    warehouseStore.update(newWarehouse);
+    // Create new one
+    warehouseStore.create(newWarehouse);
   }
 }

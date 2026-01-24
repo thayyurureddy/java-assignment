@@ -8,12 +8,20 @@ import java.nio.file.Path;
 public class LegacyStoreManagerGateway {
 
   public void createStoreOnLegacySystem(Store store) {
-    // just to emulate as this would send this to a legacy system, let's write a temp file with the
+    // just to emulate as this would send this to a legacy system, let's write a
+    // temp file with the
     writeToFile(store);
   }
 
   public void updateStoreOnLegacySystem(Store store) {
-    // just to emulate as this would send this to a legacy system, let's write a temp file with the
+    // just to emulate as this would send this to a legacy system, let's write a
+    // temp file with the
+    writeToFile(store);
+  }
+
+  public void deleteStoreOnLegacySystem(Store store) {
+    // just to emulate as this would send this to a legacy system, let's write a
+    // temp file with the
     writeToFile(store);
   }
 
@@ -27,12 +35,11 @@ public class LegacyStoreManagerGateway {
       System.out.println("Temporary file created at: " + tempFile.toString());
 
       // Step 2: Write data to the temporary file
-      String content =
-          "Store created. [ name ="
-              + store.name
-              + " ] [ items on stock ="
-              + store.quantityProductsInStock
-              + "]";
+      String content = "Store created. [ name ="
+          + store.name
+          + " ] [ items on stock ="
+          + store.quantityProductsInStock
+          + "]";
       Files.write(tempFile, content.getBytes());
       System.out.println("Data written to temporary file.");
 
