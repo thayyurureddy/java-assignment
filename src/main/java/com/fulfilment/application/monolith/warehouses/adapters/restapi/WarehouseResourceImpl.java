@@ -5,6 +5,7 @@ import com.warehouse.api.WarehouseResource;
 import com.warehouse.api.beans.Warehouse;
 import jakarta.enterprise.context.RequestScoped;
 import jakarta.inject.Inject;
+import jakarta.transaction.Transactional;
 import jakarta.validation.constraints.NotNull;
 import java.util.List;
 
@@ -26,6 +27,7 @@ public class WarehouseResourceImpl implements WarehouseResource {
   }
 
   @Override
+  @Transactional
   public Warehouse createANewWarehouseUnit(@NotNull Warehouse data) {
     var domainWarehouse = toDomain(data);
     domainWarehouse.createdAt = java.time.LocalDateTime.now();
@@ -43,6 +45,7 @@ public class WarehouseResourceImpl implements WarehouseResource {
   }
 
   @Override
+  @Transactional
   public void archiveAWarehouseUnitByID(String id) {
     var domainWarehouse = warehouseRepository.findByBusinessUnitCode(id);
     if (domainWarehouse == null) {
@@ -53,6 +56,7 @@ public class WarehouseResourceImpl implements WarehouseResource {
   }
 
   @Override
+  @Transactional
   public Warehouse replaceTheCurrentActiveWarehouse(
       String businessUnitCode, @NotNull Warehouse data) {
     var newWarehouse = toDomain(data);

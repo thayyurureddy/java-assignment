@@ -51,8 +51,8 @@ public class ReplaceWarehouseUseCase implements ReplaceWarehouseOperation {
     // But "replaceTheCurrentActiveWarehouse(businessUnitCode, data)" suggests we
     // are replacing the one with THAT BU code.
 
-    // I'll implement it as updating the existing one with new data, but applying
+    // I'll implement it as creating a new one with new data, but applying
     // the constraints.
-    warehouseStore.update(newWarehouse);
+    warehouseStore.create(newWarehouse);
   }
 }
