@@ -26,14 +26,27 @@ public class GlobalExceptionMapper implements ExceptionMapper<Exception> {
         int code = 500;
         String message = exception.getMessage();
 
-        if (exception instanceof WebApplicationException) {
-            code = ((WebApplicationException) exception).getResponse().getStatus();
-        } else if (exception instanceof ResourceNotFoundException) {
-            code = 404;
-        } else if (exception instanceof ValidationException) {
-            code = 422;
-        } else if (exception instanceof ConflictException) {
-            code = 409;
+        // Unwrap exception to find known business exceptions
+        Throwable throwable = exception;
+        while (throwable != null) {
+            if (throwable instanceof WebApplicationException) {
+                code = ((WebApplicationException) throwable).getResponse().getStatus();
+                message = throwable.getMessage();
+                break;
+            } else if (throwable instanceof ResourceNotFoundException) {
+                code = 404;
+                message = throwable.getMessage();
+                break;
+            } else if (throwable instanceof ValidationException) {
+                code = 422;
+                message = throwable.getMessage();
+                break;
+            } else if (throwable instanceof ConflictException) {
+                code = 409;
+                message = throwable.getMessage();
+                break;
+            }
+            throwable = throwable.getCause();
         }
 
         if (code >= 500) {
