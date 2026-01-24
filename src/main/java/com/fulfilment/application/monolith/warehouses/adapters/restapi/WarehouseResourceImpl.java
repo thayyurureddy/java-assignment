@@ -30,7 +30,6 @@ public class WarehouseResourceImpl implements WarehouseResource {
   @Transactional
   public Warehouse createANewWarehouseUnit(@NotNull Warehouse data) {
     var domainWarehouse = toDomain(data);
-    domainWarehouse.createdAt = java.time.LocalDateTime.now();
     createWarehouseUseCase.create(domainWarehouse);
     return toWarehouseResponse(domainWarehouse);
   }
@@ -51,7 +50,6 @@ public class WarehouseResourceImpl implements WarehouseResource {
     if (domainWarehouse == null) {
       throw new jakarta.ws.rs.WebApplicationException("Warehouse not found", 404);
     }
-    domainWarehouse.archivedAt = java.time.LocalDateTime.now();
     archiveWarehouseUseCase.archive(domainWarehouse);
   }
 

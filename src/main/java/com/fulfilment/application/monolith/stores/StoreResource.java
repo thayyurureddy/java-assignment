@@ -28,9 +28,7 @@ import org.jboss.logging.Logger;
 public class StoreResource {
 
   @Inject
-  LegacyStoreManagerGateway legacyStoreManagerGateway;
-  @Inject
-  jakarta.transaction.TransactionManager transactionManager;
+  jakarta.enterprise.event.Event<StoreEvent> storeEvent;
 
   private static final Logger LOGGER = Logger.getLogger(StoreResource.class.getName());
 
@@ -58,7 +56,7 @@ public class StoreResource {
 
     store.persist();
 
-    registerPostCommitAction(() -> legacyStoreManagerGateway.createStoreOnLegacySystem(store));
+    storeEvent.fire(new StoreEvent(store, StoreEvent.Operation.CREATE));
 
     return Response.ok(store).status(201).build();
   }
@@ -80,7 +78,7 @@ public class StoreResource {
     entity.name = updatedStore.name;
     entity.quantityProductsInStock = updatedStore.quantityProductsInStock;
 
-    registerPostCommitAction(() -> legacyStoreManagerGateway.updateStoreOnLegacySystem(updatedStore));
+    storeEvent.fire(new StoreEvent(entity, StoreEvent.Operation.UPDATE));
 
     return entity;
   }
@@ -89,25 +87,21 @@ public class StoreResource {
   @Path("{id}")
   @Transactional
   public Store patch(Long id, Store updatedStore) {
-    if (updatedStore.name == null) {
-      throw new WebApplicationException("Store Name was not set on request.", 422);
-    }
-
     Store entity = Store.findById(id);
 
     if (entity == null) {
       throw new WebApplicationException("Store with id of " + id + " does not exist.", 404);
     }
 
-    if (entity.name != null) {
+    if (updatedStore.name != null) {
       entity.name = updatedStore.name;
     }
 
-    if (entity.quantityProductsInStock != 0) {
+    if (updatedStore.quantityProductsInStock != 0) {
       entity.quantityProductsInStock = updatedStore.quantityProductsInStock;
     }
 
-    registerPostCommitAction(() -> legacyStoreManagerGateway.updateStoreOnLegacySystem(updatedStore));
+    storeEvent.fire(new StoreEvent(entity, StoreEvent.Operation.UPDATE));
 
     return entity;
   }
@@ -120,31 +114,13 @@ public class StoreResource {
     if (entity == null) {
       throw new WebApplicationException("Store with id of " + id + " does not exist.", 404);
     }
+
+    // Fire event before deletion so we have the data,
+    // but it will only be processed AFTER_SUCCESS of the transaction.
+    storeEvent.fire(new StoreEvent(entity, StoreEvent.Operation.DELETE));
+
     entity.delete();
     return Response.status(204).build();
-  }
-
-  private void registerPostCommitAction(Runnable action) {
-    try {
-      if (transactionManager.getTransaction() != null) {
-        transactionManager.getTransaction().registerSynchronization(new jakarta.transaction.Synchronization() {
-          @Override
-          public void beforeCompletion() {
-          }
-
-          @Override
-          public void afterCompletion(int status) {
-            if (status == jakarta.transaction.Status.STATUS_COMMITTED) {
-              action.run();
-            }
-          }
-        });
-      } else {
-        action.run();
-      }
-    } catch (Exception e) {
-      throw new RuntimeException("Error registering transaction synchronization", e);
-    }
   }
 
   @Provider
