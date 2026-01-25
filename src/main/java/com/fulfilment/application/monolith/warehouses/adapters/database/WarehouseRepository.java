@@ -5,9 +5,11 @@ import com.fulfilment.application.monolith.warehouses.domain.ports.WarehouseStor
 import io.quarkus.hibernate.orm.panache.PanacheRepository;
 import jakarta.enterprise.context.ApplicationScoped;
 import java.util.List;
+import org.jboss.logging.Logger;
 
 @ApplicationScoped
 public class WarehouseRepository implements WarehouseStore, PanacheRepository<DbWarehouse> {
+  private static final Logger LOGGER = Logger.getLogger(WarehouseRepository.class);
 
   @Override
   public List<Warehouse> getAll() {
@@ -16,12 +18,14 @@ public class WarehouseRepository implements WarehouseStore, PanacheRepository<Db
 
   @Override
   public void create(Warehouse warehouse) {
+    LOGGER.infof("Persisting warehouse to DB: %s", warehouse.businessUnitCode);
     DbWarehouse dbWarehouse = fromWarehouse(warehouse);
     this.persist(dbWarehouse);
   }
 
   @Override
   public void update(Warehouse warehouse) {
+    LOGGER.infof("Updating warehouse in DB: %s", warehouse.businessUnitCode);
     DbWarehouse dbWarehouse = findActiveByBuCode(warehouse.businessUnitCode);
     if (dbWarehouse != null) {
       dbWarehouse.location = warehouse.location;
@@ -29,14 +33,19 @@ public class WarehouseRepository implements WarehouseStore, PanacheRepository<Db
       dbWarehouse.stock = warehouse.stock;
       dbWarehouse.archivedAt = warehouse.archivedAt;
       this.persist(dbWarehouse);
+    } else {
+      LOGGER.warnf("Warehouse not found for update in DB: %s", warehouse.businessUnitCode);
     }
   }
 
   @Override
   public void remove(Warehouse warehouse) {
+    LOGGER.infof("Removing warehouse from DB: %s", warehouse.businessUnitCode);
     DbWarehouse dbWarehouse = findActiveByBuCode(warehouse.businessUnitCode);
     if (dbWarehouse != null) {
       this.delete(dbWarehouse);
+    } else {
+      LOGGER.warnf("Warehouse not found for removal in DB: %s", warehouse.businessUnitCode);
     }
   }
 

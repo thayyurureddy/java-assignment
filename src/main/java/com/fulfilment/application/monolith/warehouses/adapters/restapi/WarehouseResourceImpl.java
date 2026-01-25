@@ -8,6 +8,7 @@ import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
 import jakarta.validation.constraints.NotNull;
 import java.util.List;
+import org.jboss.logging.Logger;
 
 @jakarta.ws.rs.Path("/warehouse")
 @RequestScoped
@@ -22,23 +23,30 @@ public class WarehouseResourceImpl implements WarehouseResource {
   @Inject
   private com.fulfilment.application.monolith.warehouses.domain.ports.ArchiveWarehouseOperation archiveWarehouseUseCase;
 
+  private static final Logger LOGGER = Logger.getLogger(WarehouseResourceImpl.class);
+
   @Override
   public List<Warehouse> listAllWarehousesUnits() {
+    LOGGER.info("Listing all warehouse units");
     return warehouseRepository.getAll().stream().map(this::toWarehouseResponse).toList();
   }
 
   @Override
   @Transactional
   public Warehouse createANewWarehouseUnit(@NotNull Warehouse data) {
+    LOGGER.infof("Creating a new warehouse unit: %s", data.getBusinessUnitCode());
     var domainWarehouse = toDomain(data);
     createWarehouseUseCase.create(domainWarehouse);
+    LOGGER.infof("Warehouse unit created: %s", domainWarehouse.businessUnitCode);
     return toWarehouseResponse(domainWarehouse);
   }
 
   @Override
   public Warehouse getAWarehouseUnitByID(String id) {
+    LOGGER.infof("Fetching warehouse unit by ID: %s", id);
     var domainWarehouse = warehouseRepository.findByBusinessUnitCode(id);
     if (domainWarehouse == null) {
+      LOGGER.warnf("Warehouse not found: %s", id);
       throw new jakarta.ws.rs.WebApplicationException("Warehouse not found", 404);
     }
     return toWarehouseResponse(domainWarehouse);
@@ -47,20 +55,25 @@ public class WarehouseResourceImpl implements WarehouseResource {
   @Override
   @Transactional
   public void archiveAWarehouseUnitByID(String id) {
+    LOGGER.infof("Archiving warehouse unit by ID: %s", id);
     var domainWarehouse = warehouseRepository.findByBusinessUnitCode(id);
     if (domainWarehouse == null) {
+      LOGGER.warnf("Warehouse not found for archiving: %s", id);
       throw new jakarta.ws.rs.WebApplicationException("Warehouse not found", 404);
     }
     archiveWarehouseUseCase.archive(domainWarehouse);
+    LOGGER.infof("Warehouse unit archived: %s", id);
   }
 
   @Override
   @Transactional
   public Warehouse replaceTheCurrentActiveWarehouse(
       String businessUnitCode, @NotNull Warehouse data) {
+    LOGGER.infof("Replacing warehouse unit: %s", businessUnitCode);
     var newWarehouse = toDomain(data);
     newWarehouse.businessUnitCode = businessUnitCode;
     replaceWarehouseUseCase.replace(newWarehouse);
+    LOGGER.infof("Warehouse unit replaced: %s", businessUnitCode);
     return toWarehouseResponse(newWarehouse);
   }
 

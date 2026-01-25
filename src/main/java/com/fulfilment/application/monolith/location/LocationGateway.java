@@ -4,11 +4,13 @@ import com.fulfilment.application.monolith.warehouses.domain.models.Location;
 import com.fulfilment.application.monolith.warehouses.domain.ports.LocationResolver;
 import java.util.ArrayList;
 import java.util.List;
+import org.jboss.logging.Logger;
 
 @jakarta.enterprise.context.ApplicationScoped
 public class LocationGateway implements LocationResolver {
 
   private static final List<Location> locations = new ArrayList<>();
+  private static final Logger LOGGER = Logger.getLogger(LocationGateway.class);
 
   static {
     locations.add(new Location("ZWOLLE-001", 1, 40));
@@ -23,6 +25,7 @@ public class LocationGateway implements LocationResolver {
 
   @Override
   public Location resolveByIdentifier(String identifier) {
+    LOGGER.infof("Resolving location for identifier: %s", identifier);
     return locations.stream()
         .filter(l -> l.identification.equals(identifier))
         .findFirst()
