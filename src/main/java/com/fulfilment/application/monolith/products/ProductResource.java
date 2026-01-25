@@ -14,6 +14,7 @@ import jakarta.ws.rs.core.Response;
 import jakarta.ws.rs.Produces;
 import jakarta.ws.rs.WebApplicationException;
 import java.util.List;
+import org.jboss.logging.Logger;
 
 @Path("product")
 @ApplicationScoped
@@ -24,16 +25,21 @@ public class ProductResource {
   @Inject
   ProductRepository productRepository;
 
+  private static final Logger LOGGER = Logger.getLogger(ProductResource.class);
+
   @GET
   public List<Product> get() {
+    LOGGER.info("Fetching all products");
     return productRepository.listAll(Sort.by("name"));
   }
 
   @GET
   @Path("{id}")
   public Product getSingle(Long id) {
+    LOGGER.infof("Fetching product by ID: %d", id);
     Product entity = productRepository.findById(id);
     if (entity == null) {
+      LOGGER.warnf("Product not found: %d", id);
       throw new WebApplicationException("Product with id of " + id + " does not exist.", 404);
     }
     return entity;
@@ -42,11 +48,14 @@ public class ProductResource {
   @POST
   @Transactional
   public Response create(Product product) {
+    LOGGER.infof("Creating a new product: %s", product.name);
     if (product.id != null) {
+      LOGGER.warn("Attempted to create product with pre-set ID");
       throw new WebApplicationException("Id was invalidly set on request.", 422);
     }
 
     productRepository.persist(product);
+    LOGGER.infof("Product created with ID: %d", product.id);
     return Response.ok(product).status(201).build();
   }
 
@@ -54,13 +63,16 @@ public class ProductResource {
   @Path("{id}")
   @Transactional
   public Product update(Long id, Product product) {
+    LOGGER.infof("Updating product ID: %d", id);
     if (product.name == null) {
+      LOGGER.warn("Product update failed: Name is null");
       throw new WebApplicationException("Product Name was not set on request.", 422);
     }
 
     Product entity = productRepository.findById(id);
 
     if (entity == null) {
+      LOGGER.warnf("Product not found for update: %d", id);
       throw new WebApplicationException("Product with id of " + id + " does not exist.", 404);
     }
 
@@ -70,6 +82,7 @@ public class ProductResource {
     entity.stock = product.stock;
 
     productRepository.persist(entity);
+    LOGGER.infof("Product updated: %d", id);
 
     return entity;
   }
@@ -78,11 +91,14 @@ public class ProductResource {
   @Path("{id}")
   @Transactional
   public Response delete(Long id) {
+    LOGGER.infof("Deleting product ID: %d", id);
     Product entity = productRepository.findById(id);
     if (entity == null) {
+      LOGGER.warnf("Product not found for deletion: %d", id);
       throw new WebApplicationException("Product with id of " + id + " does not exist.", 404);
     }
     productRepository.delete(entity);
+    LOGGER.infof("Product deleted: %d", id);
     return Response.status(204).build();
   }
 
